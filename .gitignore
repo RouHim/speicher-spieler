@@ -1,7 +1,8 @@
 /target
 .idea
 .code
-
+youtube-dl
+*.sqlite
 
 # Added by cargo
 #

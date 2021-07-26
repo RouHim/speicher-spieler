@@ -14,8 +14,8 @@
 <div align="center">
 
     <div id="controlsPanel">
-        <input type="submit" id="btnPlay" value="Play"/>
-        <input type="submit" id="btnStop" value="Stop"/>
+        <input type="submit" id="btnPlay" value="Play" {% if player_playing %}disabled{% endif %}/>
+        <input type="submit" id="btnStop" value="Stop" {% if not player_playing %}disabled{% endif %}/>
     </div>
     <br/><br/>
     <div id="playerPanel" style="width: 90%">

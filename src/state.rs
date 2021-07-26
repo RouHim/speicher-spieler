@@ -1,6 +1,6 @@
 use diesel::{ExpressionMethods, QueryDsl};
 use rocket::{Build, Rocket};
-use rocket::serde::{Deserialize,  Serialize};
+use rocket::serde::{Deserialize, Serialize};
 use rocket_sync_db_pools::database;
 use rocket_sync_db_pools::diesel::RunQueryDsl;
 
@@ -35,28 +35,44 @@ table! {
 
 pub async fn run_migrations(rocket: Rocket<Build>) -> Rocket<Build> {
     embed_migrations!("migrations");
+
+    // create table structure
     let db_connection = PlayerStateDbConn::get_one(&rocket).await.expect("database connection");
+
+    // insert initial data
     db_connection.run(|c| embedded_migrations::run(c)).await.expect("diesel migrations");
+    let state = PlayerState {
+        id: 1,
+        playing_file_path: "".to_string(),
+        playing_file_type: "".to_string(),
+        caching_url: "".to_string(),
+        queueing_urls: "".to_string(),
+        player_playing: false,
+    };
+    create(&db_connection, &state).await;
+
     return rocket;
 }
 
-pub async fn create(db_con: &PlayerStateDbConn, state: PlayerState) {
+pub async fn create(db_con: &PlayerStateDbConn, state: &PlayerState) {
+    let cloned_state = state.clone();
     db_con.run(|conn| {
         diesel::insert_into(player_states::table)
-            .values(state)
+            .values(cloned_state)
             .execute(conn)
     }).await;
 }
 
-pub async fn write(db_con: &PlayerStateDbConn, state: PlayerState) {
+pub async fn write(db_con: &PlayerStateDbConn, state: &PlayerState) {
+    let cloned_state = state.clone();
     db_con.run(|conn| {
-        diesel::update(dsl::player_states.find(state.id))
+        diesel::update(dsl::player_states.find(cloned_state.id))
             .set((
-                playing_file_path.eq(state.playing_file_path),
-                playing_file_type.eq(state.playing_file_type),
-                caching_url.eq(state.caching_url),
-                queueing_urls.eq(state.queueing_urls),
-                player_playing.eq(state.player_playing)
+                playing_file_path.eq(cloned_state.playing_file_path),
+                playing_file_type.eq(cloned_state.playing_file_type),
+                caching_url.eq(cloned_state.caching_url),
+                queueing_urls.eq(cloned_state.queueing_urls),
+                player_playing.eq(cloned_state.player_playing)
             ))
             .execute(conn)
     }).await;
