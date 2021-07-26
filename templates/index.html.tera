@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Speicher Spieler</title>
+    <style>
+
+    </style>
+</head>
+<body>
+
+<h1 align="center">Speicher Spieler</h1>
+
+<div align="center">
+
+    <div id="controlsPanel">
+        <input type="submit" id="btnPlay" value="Play"/>
+        <input type="submit" id="btnStop" value="Stop"/>
+    </div>
+    <br/><br/>
+    <div id="playerPanel" style="width: 90%">
+        <p>Currently Playing:</p>
+        <video controls="controls">
+            <source src="{{ playing_file_path }}" type="{{ playing_file_type }}"/>
+            Sorry, your browser doesn't support embedded videos.
+        </video>
+    </div>
+    <br/><br/><br/>
+    <div id="cachingPanel" style="width: 90%;">
+        Currently Caching:
+        <p id="txtCaching">{{ caching_url }}</p>
+    </div>
+    <br/>
+    <p>Player Queue:</p>
+    <textarea id="txtQueue" wrap="off" style="width: 90%; border: solid black; height: 250px; overflow: hidden"
+              placeholder="One video or audio url per line">{{ queueing_urls }}</textarea>
+</div>
+
+
+<script lang="js">
+    let btnPlay = document.getElementById("btnPlay");
+    let btnStop = document.getElementById("btnStop");
+    let txtQueue = document.getElementById("txtQueue");
+
+    window.onload = () => {
+        btnPlay.onclick = postPlay.bind(btnPlay);
+        btnStop.onclick = postStop.bind(btnStop);
+    }
+
+    function postPlay(e) {
+        e.preventDefault();
+        let xhr = new XMLHttpRequest();
+        xhr.onreadystatechange = function () {
+            location.reload();
+        };
+        xhr.open('POST', '/api/play');
+        xhr.send(txtQueue.value);
+        return false;
+    }
+
+    function postStop(e) {
+        e.preventDefault();
+        let xhr = new XMLHttpRequest();
+        xhr.onreadystatechange = function () {
+            location.reload();
+        };
+        xhr.open('POST', '/api/stop');
+        xhr.send();
+        return false;
+    }
+</script>
+</body>
+</html>
