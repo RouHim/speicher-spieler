@@ -15,6 +15,7 @@ use crate::storage::PlayerState;
 use crate::storage::PlayerStateDbConn;
 
 mod storage;
+mod player;
 
 // https://www.youtube.com/watch?v=mSOXgy0SRvI
 // https://www.mixcloud.com/ManoelCandido/artbat-watergate-open-air-2019-beatport-live/
@@ -33,17 +34,12 @@ fn rocket() -> _ {
 
 #[post("/play", data = "<queue>")]
 async fn play_route(queue: String, conn: PlayerStateDbConn) {
-    let mut state = read(&conn, 1).await;
-    state.queueing_urls = queue;
-    state.player_playing = true;
-    write(&conn, &state).await;
+    player::play(queue, &conn).await;
 }
 
 #[post("/stop")]
 async fn stop_route(conn: PlayerStateDbConn) {
-    let mut state = read(&conn, 1).await;
-    state.player_playing = false;
-    write(&conn, &state).await;
+    player::stop(&conn).await;
 }
 
 #[get("/")]

@@ -1,11 +1,14 @@
 use diesel::{ExpressionMethods, QueryDsl, update};
 use rocket::{Build, Rocket};
 use rocket::serde::{Deserialize, Serialize};
+use rocket::serde::json::serde_json;
 use rocket_sync_db_pools::database;
 use rocket_sync_db_pools::diesel::RunQueryDsl;
 
+use player_states::dsl::player_states as ps_dsl;
+
 use crate::player_states::*;
-use rocket::serde::json::serde_json;
+use diesel::associations::HasTable;
 
 #[database("player_state")]
 pub struct PlayerStateDbConn(diesel::SqliteConnection);
@@ -67,7 +70,7 @@ pub async fn create(db_con: &PlayerStateDbConn, state: &PlayerState) {
 pub async fn write(db_con: &PlayerStateDbConn, state: &PlayerState) {
     let cloned_state = state.clone();
     db_con.run(|conn| {
-        diesel::update(player_states::dsl::player_states)
+        diesel::update(ps_dsl::find(player_states::table, cloned_state.id))
             .set((
                 playing_file_path.eq(cloned_state.playing_file_path),
                 playing_file_type.eq(cloned_state.playing_file_type),
@@ -75,7 +78,7 @@ pub async fn write(db_con: &PlayerStateDbConn, state: &PlayerState) {
                 queueing_urls.eq(cloned_state.queueing_urls),
                 player_playing.eq(cloned_state.player_playing)
             ))
-            .execute(conn)
+            .execute(conn);
     }).await;
 }
 
