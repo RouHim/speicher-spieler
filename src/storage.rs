@@ -1,15 +1,16 @@
-use diesel::{ExpressionMethods, QueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, update};
 use rocket::{Build, Rocket};
 use rocket::serde::{Deserialize, Serialize};
 use rocket_sync_db_pools::database;
 use rocket_sync_db_pools::diesel::RunQueryDsl;
 
 use crate::player_states::*;
+use rocket::serde::json::serde_json;
 
 #[database("player_state")]
 pub struct PlayerStateDbConn(diesel::SqliteConnection);
 
-#[derive(Debug, Clone, Deserialize, Serialize, Queryable, Insertable)]
+#[derive(Debug, Clone, Deserialize, Serialize, Queryable, Insertable, Identifiable)]
 #[serde(crate = "rocket::serde")]
 #[table_name = "player_states"]
 pub struct PlayerState {
@@ -41,7 +42,7 @@ pub async fn run_migrations(rocket: Rocket<Build>) -> Rocket<Build> {
 
     // insert initial data
     db_connection.run(|c| embedded_migrations::run(c)).await.expect("diesel migrations");
-    let state = PlayerState {
+    let mut state = PlayerState {
         id: 1,
         playing_file_path: "".to_string(),
         playing_file_type: "".to_string(),
@@ -66,7 +67,7 @@ pub async fn create(db_con: &PlayerStateDbConn, state: &PlayerState) {
 pub async fn write(db_con: &PlayerStateDbConn, state: &PlayerState) {
     let cloned_state = state.clone();
     db_con.run(|conn| {
-        diesel::update(dsl::player_states.find(cloned_state.id))
+        diesel::update(player_states::dsl::player_states)
             .set((
                 playing_file_path.eq(cloned_state.playing_file_path),
                 playing_file_type.eq(cloned_state.playing_file_type),

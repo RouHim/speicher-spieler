@@ -3,5 +3,5 @@ address = "0.0.0.0"
 port = 2555
 
 [global.databases]
-player_state = { url = "player-state.sqlite" }
-#player_state = { url = ":memory:" }
+#player_state = { url = "player-state.sqlite" }
+player_state = { url = ":memory:" }
