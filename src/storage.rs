@@ -50,7 +50,11 @@ pub async fn run_migrations(rocket: Rocket<Build>) -> Rocket<Build> {
         playing_file_path: "".to_string(),
         playing_file_type: "".to_string(),
         caching_url: "".to_string(),
-        queueing_urls: "".to_string(),
+        queueing_urls: "\
+        https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/1080/Big_Buck_Bunny_1080_10s_10MB.mp4\n\
+        https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4\n\
+        https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4\
+        ".to_string(),
         player_playing: false,
     };
     create(&db_connection, &state).await;

@@ -20,9 +20,7 @@
     <br/><br/>
     <div id="playerPanel" style="width: 90%">
         <p>Currently Playing:</p>
-        <video controls="controls">
-            <source src="{{ playing_file_path }}" type="{{ playing_file_type }}"/>
-            Sorry, your browser doesn't support embedded videos.
+        <video id="videoPlayer" controls="controls" src="{{ playing_file_path }}">
         </video>
     </div>
     <br/><br/><br/>
@@ -41,14 +39,20 @@
     let btnPlay = document.getElementById("btnPlay");
     let btnStop = document.getElementById("btnStop");
     let txtQueue = document.getElementById("txtQueue");
+    let videoPlayer = document.getElementById("videoPlayer");
 
     window.onload = () => {
-        btnPlay.onclick = postPlay.bind(btnPlay);
-        btnStop.onclick = postStop.bind(btnStop);
+        btnPlay.onclick = postPlay.bind(null);
+        btnStop.onclick = postStop.bind(null);
+        videoPlayer.onended = onPlayerFinished.bind();
     }
 
-    function postPlay(e) {
-        e.preventDefault();
+    function onPlayerFinished() {
+        postStop();
+        postPlay();
+    }
+
+    function postPlay() {
         let xhr = new XMLHttpRequest();
         xhr.onreadystatechange = function () {
             location.reload();
@@ -58,8 +62,7 @@
         return false;
     }
 
-    function postStop(e) {
-        e.preventDefault();
+    function postStop() {
         let xhr = new XMLHttpRequest();
         xhr.onreadystatechange = function () {
             location.reload();
