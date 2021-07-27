@@ -1,95 +1,44 @@
-use diesel::{ExpressionMethods, QueryDsl, update};
+use std::fmt::{Display, Formatter};
+use std::fmt;
+
 use rocket::{Build, Rocket};
 use rocket::serde::{Deserialize, Serialize};
 use rocket::serde::json::serde_json;
-use rocket_sync_db_pools::database;
-use rocket_sync_db_pools::diesel::RunQueryDsl;
 
-use player_states::dsl::player_states as ps_dsl;
-
-use crate::player_states::*;
-use diesel::associations::HasTable;
-
-#[database("player_state")]
-pub struct PlayerStateDbConn(diesel::SqliteConnection);
-
-#[derive(Debug, Clone, Deserialize, Serialize, Queryable, Insertable, Identifiable)]
-#[serde(crate = "rocket::serde")]
-#[table_name = "player_states"]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct PlayerState {
     pub(crate) id: i32,
     pub(crate) playing_file_path: String,
     pub(crate) playing_file_type: String,
     pub(crate) caching_url: String,
     pub(crate) queueing_urls: String,
-    #[serde(skip_deserializing)]
     pub(crate) player_playing: bool,
 }
 
-table! {
-    player_states (id) {
-        id -> Integer,
-        playing_file_path -> Text,
-        playing_file_type -> Text,
-        caching_url -> Text,
-        queueing_urls -> Text,
-        player_playing -> Bool,
+impl Display for PlayerState {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "{}", serde_json::to_string(self).unwrap())
     }
 }
 
-pub async fn run_migrations(rocket: Rocket<Build>) -> Rocket<Build> {
-    embed_migrations!("migrations");
+pub async fn create(state: &PlayerState) {
 
-    // create table structure
-    let db_connection = PlayerStateDbConn::get_one(&rocket).await.expect("database connection");
 
-    // insert initial data
-    db_connection.run(|c| embedded_migrations::run(c)).await.expect("diesel migrations");
-    let mut state = PlayerState {
-        id: 1,
+}
+
+pub async fn write(state: &PlayerState) {
+    let cloned_state = state.clone();
+
+
+}
+
+pub async fn read(player_state_id: i32) -> PlayerState {
+    return PlayerState{
+        id: 0,
         playing_file_path: "".to_string(),
         playing_file_type: "".to_string(),
         caching_url: "".to_string(),
-        queueing_urls: "\
-        https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/1080/Big_Buck_Bunny_1080_10s_10MB.mp4\n\
-        https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4\n\
-        https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4\
-        ".to_string(),
-        player_playing: false,
+        queueing_urls: "".to_string(),
+        player_playing: false
     };
-    create(&db_connection, &state).await;
-
-    return rocket;
-}
-
-pub async fn create(db_con: &PlayerStateDbConn, state: &PlayerState) {
-    let cloned_state = state.clone();
-    db_con.run(|conn| {
-        diesel::insert_into(player_states::table)
-            .values(cloned_state)
-            .execute(conn)
-    }).await;
-}
-
-pub async fn write(db_con: &PlayerStateDbConn, state: &PlayerState) {
-    let cloned_state = state.clone();
-    db_con.run(|conn| {
-        diesel::update(ps_dsl::find(player_states::table, cloned_state.id))
-            .set((
-                playing_file_path.eq(cloned_state.playing_file_path),
-                playing_file_type.eq(cloned_state.playing_file_type),
-                caching_url.eq(cloned_state.caching_url),
-                queueing_urls.eq(cloned_state.queueing_urls),
-                player_playing.eq(cloned_state.player_playing)
-            ))
-            .execute(conn);
-    }).await;
-}
-
-pub async fn read(db_con: &PlayerStateDbConn, player_state_id: i32) -> PlayerState {
-    db_con.run(move |conn| {
-        player_states::table
-            .filter(player_states::id.eq(player_state_id))
-            .first::<PlayerState>(conn)
-    }).await.unwrap()
 }

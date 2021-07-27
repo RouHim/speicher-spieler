@@ -1,8 +1,7 @@
 use crate::storage;
-use crate::storage::PlayerStateDbConn;
 
-pub async fn play(queue: String, conn: &PlayerStateDbConn) {
-    let mut state = storage::read(conn, 1).await;
+pub async fn play(queue: String) {
+    let mut state = storage::read( 1).await;
     let mut url_queue: Vec<String> = split_urls(queue);
 
     if url_queue.len() < 1 {
@@ -17,7 +16,7 @@ pub async fn play(queue: String, conn: &PlayerStateDbConn) {
     state.playing_file_type = "video/mp4".to_string();
     state.queueing_urls = url_queue.join("\n");
 
-    storage::write(conn, &state).await;
+    storage::write( &state).await;
 }
 
 fn split_urls(queue_string: String) -> Vec<String> {
@@ -28,10 +27,10 @@ fn split_urls(queue_string: String) -> Vec<String> {
         .collect();
 }
 
-pub async fn stop(conn: &PlayerStateDbConn) {
-    let mut state = storage::read(conn, 1).await;
+pub async fn stop() {
+    let mut state = storage::read( 1).await;
     state.player_playing = false;
     state.caching_url = "".to_string();
     state.playing_file_path = "".to_string();
-    storage::write(conn, &state).await;
+    storage::write( &state).await;
 }
