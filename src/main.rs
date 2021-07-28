@@ -1,11 +1,16 @@
-#[macro_use]
-extern crate rocket;
+use std::borrow::BorrowMut;
+use std::collections::HashMap;
 
-use rocket::fairing::AdHoc;
-use rocket::http::Method;
-use rocket::serde::json::serde_json;
-use rocket::serde::Serialize;
-use rocket_dyn_templates::Template;
+use actix_http::{body::Body, Response};
+use actix_web::{App, error, Error, HttpResponse, HttpServer, middleware, Result, web};
+use actix_web::dev::ServiceResponse;
+use actix_web::http::StatusCode;
+use actix_web::middleware::errhandlers::{ErrorHandlerResponse, ErrorHandlers};
+use r2d2::Pool;
+use r2d2_sqlite::SqliteConnectionManager;
+use tera::{Context, Tera};
+
+use pickledb::{PickleDb, PickleDbDumpPolicy, SerializationMethod};
 
 use crate::storage::{create, read, write};
 use crate::storage::PlayerState;
@@ -18,33 +23,57 @@ mod player;
 // https://soundcloud.com/astateoftrance/sets/chicane-an-ocean-apart-ruben
 // https://vimeo.com/8877539
 
-#https://github.com/actix/examples/blob/master/template_engines/tera/Cargo.toml
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    HttpServer::new(|| {
+        let tera = Tera::new("templates/**/*.html")
+            .unwrap();
 
-#[launch]
-fn rocket() -> _ {
-    rocket::build()
-        .mount("/", routes![index])
-        .mount("/api", routes![api_root,  play_route, stop_route])
-        .attach(Template::fairing())
+        let db_manager = SqliteConnectionManager::memory();
+        let db_pool = Pool::new(db_manager).unwrap();
+        storage::init_database(&db_pool);
+
+        App::new()
+            .data(tera)
+            .data(db_pool.clone())
+            .wrap(middleware::Logger::default()) // enable logger
+            .service(web::resource("/").route(web::get().to(index_handler)))
+            .service(web::scope(""))
+    })
+        .bind("0.0.0.0:2555")?
+        .run()
+        .await
 }
 
-#[post("/play", data = "<queue>")]
-async fn play_route(queue: String) {
-    player::play(queue).await;
-}
+// store tera template in application state
+async fn index_handler(
+    tera: web::Data<tera::Tera>,
+    db: web::Data<Pool<SqliteConnectionManager>>,
+    query: web::Query<HashMap<String, String>>,
+) -> Result<HttpResponse, Error> {
+    let connection = db.get().unwrap();
 
-#[post("/stop")]
-async fn stop_route() {
-    player::stop().await;
-}
+    let row = connection.query_row(
+        "SELECT * FROM player_states WHERE id = :id;",
+        &[(":id", 1)],
+        |row| row.get(0),
+    );
 
-#[get("/")]
-async fn api_root() -> String {
-    format!("{}", "Welcome to the API")
-}
+    // db.set("1", &PlayerState {
+    //     id: 1,
+    //     playing_file_path: "".to_string(),
+    //     playing_file_type: "".to_string(),
+    //     caching_url: "".to_string(),
+    //     queueing_urls: "".to_string(),
+    //     player_playing: false,
+    // });
+    //
+    // let state: PlayerState = db.get("1").unwrap();
 
-#[get("/")]
-async fn index() -> Template {
-    let state = read(1).await;
-    return Template::render("index", &state);
+    let content = tera.render(
+        "index.html",
+        &Context::from_serialize(&state).unwrap(),
+    ).unwrap();
+
+    Ok(HttpResponse::Ok().content_type("text/html").body(content))
 }
