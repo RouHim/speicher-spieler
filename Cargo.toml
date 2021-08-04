@@ -4,13 +4,14 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-rocket = { version = "0.5.0-rc.1", features = ["json"] }
-serde = { version = "1.0", features = ["derive"] }
-chrono = "0.4"
-tera = "1"
+# web
 actix-http = "2"
 actix-web = "3"
-
-r2d2 = "0.8"
-r2d2_sqlite = "0.14"
-rusqlite = "0.21"
+# templating
+tera = "1"
+# storage
+rusqlite = "0.25.3"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+# other
+chrono = "0.4"
