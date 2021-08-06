@@ -42,6 +42,7 @@
     let videoPlayer = document.getElementById("videoPlayer");
 
     window.onload = () => {
+        // register event listener
         btnPlay.onclick = postPlay.bind(null);
         btnStop.onclick = postStop.bind(null);
         videoPlayer.onended = onPlayerFinished.bind();

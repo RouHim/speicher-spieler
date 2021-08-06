@@ -1,7 +1,7 @@
 use std::fmt::{Display, Formatter};
 use std::fmt;
 
-use rusqlite::{Connection};
+use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 
 use crate::kv_store;
@@ -30,7 +30,9 @@ pub fn prepare(connection: &Connection) {
         playing_file_path: "".to_string(),
         playing_file_type: "".to_string(),
         caching_url: "".to_string(),
-        queueing_urls: "".to_string(),
+        queueing_urls: "https://www.learningcontainer.com/wp-content/uploads/2020/05/sample-mp4-file.mp4
+https://filesamples.com/samples/video/mp4/sample_960x400_ocean_with_audio.mp4
+https://filesamples.com/samples/video/mp4/sample_640x360.mp4".to_string(),
         player_playing: false,
     };
 
