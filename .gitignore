@@ -2,7 +2,9 @@
 .idea
 .code
 youtube-dl
-*.sqlite
+*.db
+*.db-shm
+*.db-wal
 
 # Added by cargo
 #

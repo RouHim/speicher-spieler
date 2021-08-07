@@ -3,8 +3,9 @@ use std::collections::HashMap;
 use actix_web::{App, Error, HttpResponse, HttpServer, middleware, Result, web};
 use rusqlite::Connection;
 use tera::{Context, Tera};
+use r2d2_sqlite::SqliteConnectionManager;
+use r2d2::{PooledConnection, Pool};
 
-mod player_state;
 mod player;
 mod kv_store;
 
@@ -19,12 +20,14 @@ async fn main() -> std::io::Result<()> {
         let tera = Tera::new("templates/**/*.html")
             .unwrap();
 
-        let connection: Connection = rusqlite::Connection::open(":memory:").unwrap();
-        player_state::prepare(&connection);
+        let manager = SqliteConnectionManager::file("data.db");
+        let pool = r2d2::Pool::new(manager).unwrap();
+
+        player::prepare(&pool);
 
         App::new()
             .data(tera)
-            .data(connection)
+            .data(pool)
             .wrap(middleware::Logger::default()) // enable logger
             .route("/", web::get().to(web_get_handler))
             .route("/api/play", web::post().to(api_play_handler))
@@ -38,10 +41,9 @@ async fn main() -> std::io::Result<()> {
 
 async fn web_get_handler(
     tera: web::Data<tera::Tera>,
-    db_connection: web::Data<Connection>,
-    query: web::Query<HashMap<String, String>>,
+    pool: web::Data<Pool<SqliteConnectionManager>>,
 ) -> Result<HttpResponse, Error> {
-    let state = player_state::get(db_connection.get_ref(), "1").await;
+    let state = player::get(&pool.get().unwrap(), "1");
 
     println!("GET / {}", &state);
 
@@ -54,7 +56,7 @@ async fn web_get_handler(
 }
 
 async fn api_play_handler(
-    db_connection: web::Data<Connection>,
+    pool: web::Data<Pool<SqliteConnectionManager>>,
     payload: web::Bytes,
 ) -> Result<HttpResponse, Error> {
     let body_as_string = std::str::from_utf8(payload.as_ref()).unwrap().to_string();
@@ -62,7 +64,7 @@ async fn api_play_handler(
     println!("PUT /api/play {}", &body_as_string);
 
     player::play(
-        db_connection.as_ref(),
+        pool.as_ref(),
         "1",
         body_as_string,
     ).await;
@@ -72,12 +74,12 @@ async fn api_play_handler(
 
 
 async fn api_stop_handler(
-    db_connection: web::Data<Connection>,
+    pool: web::Data<Pool<SqliteConnectionManager>>,
 ) -> Result<HttpResponse, Error> {
     println!("PUT /api/stop");
 
     player::stop(
-        db_connection.as_ref(),
+        pool.as_ref(),
         "1",
     ).await;
 
