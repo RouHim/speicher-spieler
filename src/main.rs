@@ -29,7 +29,6 @@ async fn main() -> std::io::Result<()> {
             .route("/", web::get().to(web_get_handler))
             .route("/api/play", web::post().to(api_play_handler))
             .route("/api/stop", web::post().to(api_stop_handler))
-            // .service(web::resource("/api").route(web::get().to(api_get_handler)))
             .service(web::scope(""))
     })
         .bind("0.0.0.0:2555")?
@@ -44,7 +43,7 @@ async fn web_get_handler(
 ) -> Result<HttpResponse, Error> {
     let state = player_state::get(db_connection.get_ref(), "1").await;
 
-    println!("GET / {}", state);
+    println!("GET / {}", &state);
 
     let content = tera.render(
         "index.html",
@@ -54,20 +53,13 @@ async fn web_get_handler(
     Ok(HttpResponse::Ok().content_type("text/html").body(content))
 }
 
-
-async fn api_get_handler(
-    tera: web::Data<tera::Tera>,
-    db_connection: web::Data<Connection>,
-    query: web::Query<HashMap<String, String>>,
-) -> Result<HttpResponse, Error> {
-    Ok(HttpResponse::Ok().content_type("text/html").body("content"))
-}
-
 async fn api_play_handler(
     db_connection: web::Data<Connection>,
     payload: web::Bytes,
 ) -> Result<HttpResponse, Error> {
     let body_as_string = std::str::from_utf8(payload.as_ref()).unwrap().to_string();
+
+    println!("PUT /api/play {}", &body_as_string);
 
     player::play(
         db_connection.as_ref(),
@@ -82,6 +74,8 @@ async fn api_play_handler(
 async fn api_stop_handler(
     db_connection: web::Data<Connection>,
 ) -> Result<HttpResponse, Error> {
+    println!("PUT /api/stop");
+
     player::stop(
         db_connection.as_ref(),
         "1",
