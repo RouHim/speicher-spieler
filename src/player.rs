@@ -2,7 +2,7 @@ use rusqlite::Connection;
 
 use std::fmt::{Display, Formatter};
 use std::fmt;
-use crate::{kv_store};
+use crate::{kv_store, speicher};
 use r2d2::{Pool, PooledConnection};
 use r2d2_sqlite::SqliteConnectionManager;
 use serde::{Deserialize, Serialize, Deserializer, Serializer};
@@ -32,9 +32,10 @@ pub fn prepare(pool: &Pool<SqliteConnectionManager>) {
     kv_store::set(&con, "playing_file_path", "");
     kv_store::set(&con, "playing_file_type", "");
     kv_store::set(&con, "caching_url", "");
-    kv_store::set(&con, "queueing_urls", "https://www.learningcontainer.com/wp-content/uploads/2020/05/sample-mp4-file.mp4
-https://filesamples.com/samples/video/mp4/sample_960x400_ocean_with_audio.mp4
-https://filesamples.com/samples/video/mp4/sample_640x360.mp4".to_string());
+    kv_store::set(&con, "queueing_urls", "https://www.youtube.com/watch?v=mSOXgy0SRvI
+https://www.mixcloud.com/ManoelCandido/artbat-watergate-open-air-2019-beatport-live/
+https://soundcloud.com/astateoftrance/sets/chicane-an-ocean-apart-ruben
+https://vimeo.com/8877539".to_string());
     kv_store::set(&con, "player_playing", false);
 }
 
@@ -50,10 +51,12 @@ pub async fn play(pool: &Pool<SqliteConnectionManager>, queue: String) {
     url_queue.remove(0);
 
     kv_store::set(&con, "player_playing", true);
-    kv_store::set(&con, "caching_url", "");
-    kv_store::set(&con, "playing_file_path", first.as_str());
+    kv_store::set(&con, "caching_url", first.as_str());
+    kv_store::set(&con, "playing_file_path", "");
     kv_store::set(&con, "playing_file_type", "video/mp4");
     kv_store::set(&con, "queueing_urls", url_queue.join("\n").as_str());
+
+    speicher::begin_caching(&con);
 }
 
 pub async fn stop(pool: &Pool<SqliteConnectionManager>) {

@@ -8,6 +8,7 @@ use r2d2::{PooledConnection, Pool};
 
 mod player;
 mod kv_store;
+mod speicher;
 
 // https://www.youtube.com/watch?v=mSOXgy0SRvI
 // https://www.mixcloud.com/ManoelCandido/artbat-watergate-open-air-2019-beatport-live/
