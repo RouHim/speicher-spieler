@@ -14,8 +14,9 @@
 <div align="center">
 
     <div id="controlsPanel">
-        <input type="submit" id="btnPlay" value="Play" {% if player_playing %}disabled{% endif %}/>
-        <input type="submit" id="btnStop" value="Stop" {% if not player_playing %}disabled{% endif %}/>
+        <label>value: {% if player_playing %}player_playing{% endif %}</label>
+        <button type="button" id="btnPlay" {% if player_playing %}disabled{% endif %}>Play</button>
+        <button type="button" id="btnStop" {% if not player_playing %}disabled{% endif %}>Stop</button>
     </div>
     <br/><br/>
     <div id="playerPanel" style="width: 90%">
@@ -46,16 +47,45 @@
         btnPlay.onclick = postPlay.bind(null);
         btnStop.onclick = postStop.bind(null);
         videoPlayer.onended = onPlayerFinished.bind();
+
+        // handle url hash
+        handleUrlHash();
+    }
+
+    function handleUrlHash() {
+        if (window.location.hash === '#play') {
+            videoPlayer.play();
+        }
+        if (window.location.hash === '#stop') {
+            videoPlayer.pause();
+        }
     }
 
     function onPlayerFinished() {
-        postStop();
-        postPlay();
+        console.log("onPlayerFinished()");
+        postPlayNext();
     }
 
     function postPlay() {
         let xhr = new XMLHttpRequest();
         xhr.onreadystatechange = function () {
+            window.location.hash = 'play';
+            location.reload();
+        };
+        xhr.open('POST', '/api/play');
+        xhr.send(txtQueue.value);
+        return false;
+    }
+
+    function postPlayNext() {
+        if (isBlank(txtQueue.value)) {
+            postStop();
+            return;
+        }
+
+        let xhr = new XMLHttpRequest();
+        xhr.onreadystatechange = function () {
+            window.location.hash = 'play';
             location.reload();
         };
         xhr.open('POST', '/api/play');
@@ -66,11 +96,16 @@
     function postStop() {
         let xhr = new XMLHttpRequest();
         xhr.onreadystatechange = function () {
+            window.location.hash = 'stop';
             location.reload();
         };
         xhr.open('POST', '/api/stop');
         xhr.send();
         return false;
+    }
+
+    function isBlank(str) {
+        return (!str || /^\s*$/.test(str));
     }
 </script>
 </body>

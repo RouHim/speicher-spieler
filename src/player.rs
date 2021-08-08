@@ -11,29 +11,11 @@ use serde::__private::de;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct PlayerState {
-    pub(crate) id: i32,
-    pub(crate) playing_file_path: String,
-    pub(crate) playing_file_type: String,
-    pub(crate) caching_url: String,
-    pub(crate) queueing_urls: String,
-    #[serde(deserialize_with = "int_to_bool")]
-    // #[serde(serialize_with = "bool_to_int")]
-    pub(crate) player_playing: bool,
-}
-
-fn int_to_bool<'de, D>(deserializer: D) -> Result<bool, D::Error> where D: Deserializer<'de> {
-    match u8::deserialize(deserializer)? {
-        0 => Ok(false),
-        1 => Ok(true),
-        _ => Ok(false)
-    }
-}
-
-fn bool_to_int<'se, S>(serializer: S) -> Result<i32, S::Error> where S: Serializer {
-    match bool::serialize(serializer)? {
-        true => Ok(1),
-        false => Ok(0),
-    }
+    pub playing_file_path: String,
+    pub playing_file_type: String,
+    pub caching_url: String,
+    pub queueing_urls: String,
+    pub player_playing: bool,
 }
 
 impl Display for PlayerState {
@@ -47,26 +29,16 @@ pub fn prepare(pool: &Pool<SqliteConnectionManager>) {
 
     kv_store::setup(&con);
 
-    let initial_state = PlayerState {
-        id: 1,
-        playing_file_path: "".to_string(),
-        playing_file_type: "".to_string(),
-        caching_url: "".to_string(),
-        queueing_urls: "https://www.learningcontainer.com/wp-content/uploads/2020/05/sample-mp4-file.mp4
+    kv_store::set(&con, "playing_file_path", "");
+    kv_store::set(&con, "playing_file_type", "");
+    kv_store::set(&con, "caching_url", "");
+    kv_store::set(&con, "queueing_urls", "https://www.learningcontainer.com/wp-content/uploads/2020/05/sample-mp4-file.mp4
 https://filesamples.com/samples/video/mp4/sample_960x400_ocean_with_audio.mp4
-https://filesamples.com/samples/video/mp4/sample_640x360.mp4".to_string(),
-        player_playing: false,
-    };
-
-    kv_store::set(
-        &con,
-        "1",
-        initial_state,
-    );
+https://filesamples.com/samples/video/mp4/sample_640x360.mp4".to_string());
+    kv_store::set(&con, "player_playing", false);
 }
 
-
-pub async fn play(pool: &Pool<SqliteConnectionManager>, key: &str, queue: String) {
+pub async fn play(pool: &Pool<SqliteConnectionManager>, queue: String) {
     let mut con = pool.get().unwrap();
 
     let mut url_queue: Vec<String> = split_urls(queue);
@@ -77,19 +49,19 @@ pub async fn play(pool: &Pool<SqliteConnectionManager>, key: &str, queue: String
     let first = url_queue.get(0).unwrap().clone();
     url_queue.remove(0);
 
-    kv_store::set_bool(&con, key, "player_playing", true);
-    kv_store::set_string(&con, key, "playing_file_path", first.as_str());
-    kv_store::set_string(&con, key, "playing_file_type", "video/mp4");
-    kv_store::set_string(&con, key, "queueing_urls", url_queue.join("\n").as_str());
+    kv_store::set(&con, "player_playing", true);
+    kv_store::set(&con, "playing_file_path", first.as_str());
+    kv_store::set(&con, "playing_file_type", "video/mp4");
+    kv_store::set(&con, "queueing_urls", url_queue.join("\n").as_str());
 }
 
-pub async fn stop(pool: &Pool<SqliteConnectionManager>, key: &str) {
-    let mut con = pool.get().unwrap();
+pub async fn stop(pool: &Pool<SqliteConnectionManager>) {
+    let con = pool.get().unwrap();
 
-    kv_store::set_bool(&con, key, "player_playing", false);
-    kv_store::set_string(&con, key, "caching_url", "");
-    kv_store::set_string(&con, key, "playing_file_path", "");
-    kv_store::set_string(&con, key, "playing_file_type", "");
+    kv_store::set(&con, "player_playing", false);
+    kv_store::set(&con, "caching_url", "");
+    kv_store::set(&con, "playing_file_path", "");
+    kv_store::set(&con, "playing_file_type", "");
 }
 
 fn split_urls(queue_string: String) -> Vec<String> {
@@ -100,6 +72,12 @@ fn split_urls(queue_string: String) -> Vec<String> {
         .collect();
 }
 
-pub fn get(con: &PooledConnection<SqliteConnectionManager>, key: &str) -> PlayerState {
-    return kv_store::get(con, key);
+pub fn get(con: &PooledConnection<SqliteConnectionManager>) -> PlayerState {
+    PlayerState {
+        playing_file_path: kv_store::get(con, "playing_file_path"),
+        playing_file_type: kv_store::get(con, "playing_file_type"),
+        caching_url: kv_store::get(con, "caching_url"),
+        queueing_urls: kv_store::get(con, "queueing_urls"),
+        player_playing: kv_store::get(con, "player_playing"),
+    }
 }

@@ -43,7 +43,7 @@ async fn web_get_handler(
     tera: web::Data<tera::Tera>,
     pool: web::Data<Pool<SqliteConnectionManager>>,
 ) -> Result<HttpResponse, Error> {
-    let state = player::get(&pool.get().unwrap(), "1");
+    let state = player::get(&pool.get().unwrap());
 
     println!("GET / {}", &state);
 
@@ -65,23 +65,18 @@ async fn api_play_handler(
 
     player::play(
         pool.as_ref(),
-        "1",
         body_as_string,
     ).await;
 
     Ok(HttpResponse::Ok().finish())
 }
 
-
 async fn api_stop_handler(
     pool: web::Data<Pool<SqliteConnectionManager>>,
 ) -> Result<HttpResponse, Error> {
     println!("PUT /api/stop");
 
-    player::stop(
-        pool.as_ref(),
-        "1",
-    ).await;
+    player::stop(pool.as_ref()).await;
 
     Ok(HttpResponse::Ok().finish())
 }

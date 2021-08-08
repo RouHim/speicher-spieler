@@ -12,8 +12,6 @@ use rusqlite::{Connection, params, Result};
 use r2d2::PooledConnection;
 use r2d2_sqlite::SqliteConnectionManager;
 
-// TODO: herausfinden warum im json das bool feld zu 0/1 konvertiert wird
-
 pub fn setup(con: &PooledConnection<SqliteConnectionManager>) {
     con.execute_batch("
                 PRAGMA journal_mode = WAL;          -- better write-concurrency
@@ -34,28 +32,6 @@ pub fn set<T: Serialize>(con: &PooledConnection<SqliteConnectionManager>, key: &
     con.execute(
         "REPLACE INTO kv (key, value) VALUES (?1, ?2)",
         params![key, json_value],
-    ).unwrap();
-}
-
-pub fn set_string(con: &PooledConnection<SqliteConnectionManager>, key: &str, field: &str, value: &str) {
-    let update_query = format!("UPDATE kv
-                SET value = (select json_set(kv.value, '$.{}', '{}') from kv)
-                WHERE key == ?1;
-            ", field, value);
-    con.execute(
-        update_query.as_str(),
-        params![key],
-    ).unwrap();
-}
-
-pub fn set_bool(con: &PooledConnection<SqliteConnectionManager>, key: &str, field: &str, value: bool) {
-    let update_query = format!("UPDATE kv
-                SET value = (select json_set(kv.value, '$.{}', {}) from kv)
-                WHERE key == ?1;
-            ", field, value);
-    con.execute(
-        update_query.as_str(),
-        params![key],
     ).unwrap();
 }
 
