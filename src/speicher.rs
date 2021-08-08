@@ -23,6 +23,7 @@ pub fn begin_caching(con: &PooledConnection<SqliteConnectionManager>) {
     let mut process_status = spawned_process.try_wait().unwrap();
 
     // TODO separaetes projekt aufsetzten asynch prozess output zyklisch geparst wird
+    // https://stackoverflow.com/questions/34611742/how-do-i-read-the-output-of-a-child-process-without-blocking-in-rust
     while Ok(process_status).is_ok() {
         let take = stdout.take().unwrap().
 
