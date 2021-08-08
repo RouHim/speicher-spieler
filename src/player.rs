@@ -10,7 +10,7 @@ use serde::de::Unexpected;
 use serde::__private::de;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct PlayerState {
+pub struct PlayerViewModel {
     pub playing_file_path: String,
     pub playing_file_type: String,
     pub caching_url: String,
@@ -18,7 +18,7 @@ pub struct PlayerState {
     pub player_playing: bool,
 }
 
-impl Display for PlayerState {
+impl Display for PlayerViewModel {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "{}", serde_json::to_string(self).unwrap())
     }
@@ -50,6 +50,7 @@ pub async fn play(pool: &Pool<SqliteConnectionManager>, queue: String) {
     url_queue.remove(0);
 
     kv_store::set(&con, "player_playing", true);
+    kv_store::set(&con, "caching_url", "");
     kv_store::set(&con, "playing_file_path", first.as_str());
     kv_store::set(&con, "playing_file_type", "video/mp4");
     kv_store::set(&con, "queueing_urls", url_queue.join("\n").as_str());
@@ -72,8 +73,8 @@ fn split_urls(queue_string: String) -> Vec<String> {
         .collect();
 }
 
-pub fn get(con: &PooledConnection<SqliteConnectionManager>) -> PlayerState {
-    PlayerState {
+pub fn get(con: &PooledConnection<SqliteConnectionManager>) -> PlayerViewModel {
+    PlayerViewModel {
         playing_file_path: kv_store::get(con, "playing_file_path"),
         playing_file_type: kv_store::get(con, "playing_file_type"),
         caching_url: kv_store::get(con, "caching_url"),
