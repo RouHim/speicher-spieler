@@ -1,40 +1,52 @@
-use std::process::Command;
+use core::time;
+use std::io::{BufReader, Read};
+use std::process::{Command, Stdio};
+use std::thread;
 
+use lazy_static::lazy_static;
 use r2d2::PooledConnection;
 use r2d2_sqlite::SqliteConnectionManager;
+use regex::Regex;
 
 use crate::kv_store;
-use std::thread;
-use core::time;
-use std::io::Read;
+
+lazy_static! {
+    static ref PERCENTAGE_PATTERN: Regex = Regex::new(r"(?P<percentage>\d{0,3}\.\d+)%").unwrap();
+}
 
 pub fn begin_caching(con: &PooledConnection<SqliteConnectionManager>) {
     let url_to_cache: String = kv_store::get(&con, "caching_url");
+    kv_store::set(&con, "is_caching", true);
 
-    let youtubedl_cmd = Command::new("/home/rouven/projects/speicher-spieler/youtube-dl")
+    let mut cmd = Command::new("/home/rouven/projects/playground/yt-dlp")
         .arg(url_to_cache)
-        .arg("-f")
-        .arg("mp4")
-        .arg("-o")
-        .arg("/home/rouven/Downloads/cache");
+        .stdout(Stdio::piped())
+        .spawn().expect("cannot spawn");
 
-    let mut spawned_process = youtubedl_cmd.spawn().expect("failed to spawn process");
-    let stdout = spawned_process.stdout;
-    let mut process_status = spawned_process.try_wait().unwrap();
+    let cache_thread = std::thread::spawn(move || {
+        let mut reader = BufReader::new(cmd.stdout.unwrap());
 
-    // TODO separaetes projekt aufsetzten asynch prozess output zyklisch geparst wird
-    // https://stackoverflow.com/questions/34611742/how-do-i-read-the-output-of-a-child-process-without-blocking-in-rust
-    while Ok(process_status).is_ok() {
-        let take = stdout.take().unwrap().
+        let mut buffer = [0; 48];
+        let mut bytes_read = reader.read(&mut buffer);
+        let mut percentage = extract_percentage(&buffer);
 
-        println!("{}", take);
-        thread::sleep(time::Duration::from_millis(500));
-        process_status = spawned_process.try_wait().unwrap();
-    }
+        while bytes_read.is_ok() && bytes_read.unwrap() > 0 {
+            bytes_read = reader.read(&mut buffer);
+            percentage = extract_percentage(&buffer);
+            kv_store::set(&con, "caching_progress", percentage);
+        }
+    });
 
-    let output = youtubedl_cmd
-        .output()
-        .expect("failed to execute process");
+    // block until caching is done
+    cache_thread.join();
+    kv_store::set(&con, "is_caching", false);
+}
 
-    let percentage_extractor_regex = "\\d{0,3}\\.\\d+%";
+fn extract_percentage(data_buffer: &[u8]) -> f32 {
+    let str_data = std::str::from_utf8(data_buffer).unwrap();
+    let percentage = PERCENTAGE_PATTERN.captures(str_data)
+        .map(|mat| mat.name("percentage"))
+        .map(|mat| mat.unwrap().as_str().to_string())
+        .unwrap_or(String::from("0"));
+    percentage.parse().unwrap_or(0)
 }

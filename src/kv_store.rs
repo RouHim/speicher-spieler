@@ -3,8 +3,6 @@
 // serde = { version = "1.0", features = ["derive"] }
 // serde_json = "1.0"
 //
-// REQUIRES: struct that implements #[derive(Serialize, Deserialize)]
-
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
